@@ -1,0 +1,4 @@
+# 仅用于本地验证：直接把源码文件塞进 Loader（不经过 npm 安装）。
+- insert:
+    - id: dsh-screen
+      name: '/Users/zhanghao/Documents/deepseek-harness/default-workspace/dsh-screen/lib/index.js'

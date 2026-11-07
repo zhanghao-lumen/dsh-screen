@@ -1,0 +1,57 @@
+{
+  "name": "dsh-screen",
+  "version": "0.4.1",
+  "description": "屏幕观察 + 语音的学习辅助插件：按需看屏幕、自动记笔记、说话提问、朗读回答",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhanghao-lumen/dsh-screen.git"
+  },
+  "homepage": "https://github.com/zhanghao-lumen/dsh-screen#readme",
+  "bugs": {
+    "url": "https://github.com/zhanghao-lumen/dsh-screen/issues"
+  },
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "native/bin",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "keywords": [
+    "dsh-plugin",
+    "dsh",
+    "deepseek-harness",
+    "screen",
+    "vision",
+    "cordis"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.4"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node test/host.test.mjs && node test/client.test.mjs",
+    "check": "node --check lib/index.js && node --check lib/client.js"
+  }
+}
