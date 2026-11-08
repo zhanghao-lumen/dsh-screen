@@ -43,3 +43,10 @@ fi
 
 ls -lh "$BIN"
 echo "完成。包装到 profile 时记得带上 native/bin。"
+
+# 菜单栏小程序（可选）：构建后可用 scripts/install-menubar.sh 安装为登录自启。
+if [ -f "$ROOT/native/menubar.swift" ]; then
+  echo "==> 编译菜单栏小程序"
+  swiftc -O -swift-version 5 "$ROOT/native/menubar.swift" \
+    -o "$ROOT/native/bin/dsh-screen-menubar" -framework AppKit -framework Carbon
+fi

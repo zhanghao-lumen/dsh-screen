@@ -207,6 +207,27 @@ scripts/install-local.sh desktop   # 复制文件 + 把 dsh-screen 加进 dsh.pr
 
 > 注意：之后如果在应用里安装别的插件，pnpm 可能把不在依赖里的目录清掉；重新跑一次脚本即可。
 
+## 菜单栏小程序
+
+不想开页面也能开关学习模式：`native/menubar.swift` 是一个常驻菜单栏的状态入口。
+
+```bash
+scripts/install-menubar.sh    # 编译 → 打包成 ~/Applications/DSH Screen.app → 注册登录自启
+```
+
+它显示：
+
+- 图标旁的状态点（● 已开启 / ○ 未开启），点击展开菜单
+- 菜单里能看到「每 N 秒观察 · 画面 X 秒前 · 笔记 N 条 · 变化 N 次」
+- 一键开关、打开 DeepSeek Harness、在浏览器打开控制台
+- 全局快捷键 **⌥⌘D**：不点图标也能开关（菜单栏图标被折叠时用它）
+
+它怎么找到宿主：先读插件启动时写的 `~/.dsh/dsh-screen.api.json`（含端口），读不到就用
+`lsof` 找 DeepSeek Harness 监听的端口，逐个试探 `/dsh-screen-api/state`。所以应用端口随机也不要紧。
+
+> macOS 26 的菜单栏会折叠放不下的状态项（左侧的「»/«」箭头）。图标没出现时点一下箭头展开，
+> 或者按住 ⌘ 把它拖到箭头右侧固定住。
+
 ## 权限与隐私
 
 - **抓的是整屏**，包括通知、聊天窗口、密码框。开启前想清楚屏幕上会出现什么。
