@@ -22,7 +22,10 @@ jobs:
       - name: 语法检查
         run: npm run check
       - name: 单元测试（用固定帧，CI 里没有屏幕和 TCC 权限）
-        run: npm run test:ci 2>&1 | tee /tmp/test.log
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run test:ci 2>&1 | tee /tmp/test.log
       - name: 失败时把日志写进检查输出
         if: failure()
         env:
