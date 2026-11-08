@@ -195,6 +195,18 @@ curl http://127.0.0.1:64991/dsh-screen-api/state
 
 估算口径写在代码里：滚图片按 `宽×高/800`，文字按 `字符/1.6`。**它是估算，不是账单**——但你用它判断「开一天学习模式值不值」足够了。数据存在 `$DSH_HOME/dsh-screen-stats.json`，只留 14 天，不上传。
 
+### 装进桌面应用（桌面 profile 被应用独占时）
+
+Electron 应用独占 `desktop` profile，`dsh plugin --profile desktop` 会被拒绝。仓库里带了脚本，效果等同在应用内「插件管理 → 本地目录」装一次：
+
+```bash
+scripts/install-local.sh desktop   # 复制文件 + 把 dsh-screen 加进 dsh.profile.bundles
+```
+
+然后**重启应用**（bundle 列表在启动时读取）。脚本会先把 `package.json` 备份成 `package.json.bak-<时间戳>`。
+
+> 注意：之后如果在应用里安装别的插件，pnpm 可能把不在依赖里的目录清掉；重新跑一次脚本即可。
+
 ## 权限与隐私
 
 - **抓的是整屏**，包括通知、聊天窗口、密码框。开启前想清楚屏幕上会出现什么。
