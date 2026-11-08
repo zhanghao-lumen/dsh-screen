@@ -1,5 +1,8 @@
 process.env.DSH_SCREEN_NO_SAMPLER = '1'
 import { createServer } from 'node:http'
+import { writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
 const mod = await import(new URL('../lib/index.js', import.meta.url).href)
 const { apply, internals } = mod
@@ -171,14 +174,12 @@ console.log('[api] POST /voice/nope ->', await call('/voice/nope', { method: 'PO
 const realFetch = globalThis.fetch
 globalThis.fetch = async () => ({ ok: true, text: async () => '  这是语音测试，请把这句话转成文字。 [BLANK_AUDIO]\n' })
 runtime.voice.port = 64999
-console.log('[transcribe] ->', JSON.stringify(await mod.transcribe('/tmp/t.wav')))
+const probeWav = join(tmpdir(), `dsh-screen-probe-${process.pid}.wav`)
+writeFileSync(probeWav, wavBuffer(1, 0.2))
+console.log('[transcribe] ->', JSON.stringify(await mod.transcribe(probeWav)))
 globalThis.fetch = realFetch
 
 // 11b. 电平阈值：现场生成 WAV，不依赖本机任何临时文件（CI 也能跑）
-import { writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-
 function wavBuffer(seconds, amp) {
   const sr = 16000
   const n = Math.round(sr * seconds)
