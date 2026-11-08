@@ -174,8 +174,40 @@ runtime.voice.port = 64999
 console.log('[transcribe] ->', JSON.stringify(await mod.transcribe('/tmp/t.wav')))
 globalThis.fetch = realFetch
 
-console.log('[silence] 环境噪声 RMS =', Math.round(await internals.wavRms('/tmp/rt/o.wav')), '（<90 视为没说话）')
-console.log('[silence] 人声 RMS =', Math.round(await internals.wavRms('/tmp/t.wav')))
+// 11b. 电平阈值：现场生成 WAV，不依赖本机任何临时文件（CI 也能跑）
+import { writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+function wavBuffer(seconds, amp) {
+  const sr = 16000
+  const n = Math.round(sr * seconds)
+  const buf = Buffer.alloc(44 + n * 2)
+  buf.write('RIFF', 0)
+  buf.writeUInt32LE(36 + n * 2, 4)
+  buf.write('WAVE', 8)
+  buf.write('fmt ', 12)
+  buf.writeUInt32LE(16, 16)
+  buf.writeUInt16LE(1, 20)
+  buf.writeUInt16LE(1, 22)
+  buf.writeUInt32LE(sr, 24)
+  buf.writeUInt32LE(sr * 2, 28)
+  buf.writeUInt16LE(2, 32)
+  buf.writeUInt16LE(16, 34)
+  buf.write('data', 36)
+  buf.writeUInt32LE(n * 2, 40)
+  for (let i = 0; i < n; i += 1) buf.writeInt16LE(Math.round(Math.sin(i / 8) * amp * 32767), 44 + i * 2)
+  return buf
+}
+
+const silentWav = join(tmpdir(), `dsh-screen-silence-${process.pid}.wav`)
+const voiceWav = join(tmpdir(), `dsh-screen-voice-${process.pid}.wav`)
+writeFileSync(silentWav, wavBuffer(1, 0))
+writeFileSync(voiceWav, wavBuffer(1, 0.3))
+const silentRms = Math.round(await internals.wavRms(silentWav))
+const voiceRms = Math.round(await internals.wavRms(voiceWav))
+console.log('[silence] 静音 RMS =', silentRms, '| 有声音 RMS =', voiceRms, '（<90 视为没说话）')
+if (silentRms >= 90 || voiceRms < 90) throw new Error('电平阈值判断不对')
 
 runtime.voice.tts = false
 mod.speak('这一句不该被念出来')
