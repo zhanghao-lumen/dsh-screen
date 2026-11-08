@@ -257,5 +257,16 @@ console.log('[camera cmd]', camCmd.text, '| 新消息块:', camTypes)
 if (agent.sent === beforeCam) throw new Error('/camera 应该把照片发给会话')
 if (!camTypes.includes('image')) throw new Error('/camera 发的消息里应该有图片')
 
+// 14. 用量统计：tick 过的次数要能对上，token 估算大于 0
+const stats = internals.statsSummary()
+console.log('\n[stats]', JSON.stringify(stats.today))
+if (stats.today.ticks < 1) throw new Error('统计里应该有自动观察次数')
+if (!(stats.today.tokens > 0)) throw new Error('token 估算应大于 0')
+const statsCmd = await commands.get('study').handler({ agent, rawInput: ' stats', attachments: [] })
+console.log('[stats cmd]', statsCmd.text.split('\n')[0])
+if (!statsCmd.text.includes('今日')) throw new Error('/study stats 应输出今日用量')
+const stateWithStats = internals.currentState(ctx)
+if (!stateWithStats.stats || !stateWithStats.stats.tokens) throw new Error('/state 应带上今日用量')
+
 server.close()
 process.exit(0)
