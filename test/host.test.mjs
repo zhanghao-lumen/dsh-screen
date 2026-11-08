@@ -1,4 +1,5 @@
 process.env.DSH_SCREEN_NO_SAMPLER = '1'
+process.env.DSH_SCREEN_FAKE_CAMERA = '1'
 import { createServer } from 'node:http'
 import { writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -233,6 +234,28 @@ if (other.sent) throw new Error('会话隔离失败：注入到了别的会话')
 sessionHandler({ id: 'session-2' }, { type: 'assistant/message', data: { stream: [] } })
 console.log('[isolation] onEvent 之后绑定仍是:', runtime.sessionId, '| lastActive:', runtime.lastActiveSession)
 if (runtime.sessionId !== 'session-1') throw new Error('onEvent 不应改写注入目标')
+
+// 13. 摄像头：拍一帧、连续几帧挑代表、doctor
+const camShot = await tools.get('camera_shot').execute({ scale: 480 }, { agent })
+console.log('\n[camera_shot]', JSON.stringify(camShot.imageStatus), '| images:', camShot.images.length)
+if (!camShot.images.length) throw new Error('camera_shot 应该把图片交给模型')
+const camBlocks = tools.get('camera_shot').output.render({}, camShot)
+if (camBlocks[0].type !== 'text' || camBlocks[1].type !== 'image') throw new Error('camera_shot 渲染块不对')
+
+const camWatch = await tools.get('camera_watch').execute({ seconds: 2, intervalMs: 400 }, { agent })
+console.log('[camera_watch]', JSON.stringify(camWatch.imageStatus), '| images:', camWatch.images.length)
+if (camWatch.images.length < 2 || camWatch.images.length > 5) throw new Error('camera_watch 只应挑 2-5 帧')
+
+const camDoc = await commands.get('camera').handler({ agent, rawInput: ' doctor', attachments: [] })
+console.log('[camera doctor]', camDoc.text.split('\n')[0])
+if (camDoc.kind !== 'success') throw new Error('camera doctor 应成功')
+
+const beforeCam = agent.sent
+const camCmd = await commands.get('camera').handler({ agent, rawInput: '', attachments: [] })
+const camTypes = (agent.sent?.content ?? []).map((b) => b.type).join(',')
+console.log('[camera cmd]', camCmd.text, '| 新消息块:', camTypes)
+if (agent.sent === beforeCam) throw new Error('/camera 应该把照片发给会话')
+if (!camTypes.includes('image')) throw new Error('/camera 发的消息里应该有图片')
 
 server.close()
 process.exit(0)

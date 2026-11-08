@@ -1,7 +1,7 @@
 {
   "name": "dsh-screen",
-  "version": "0.5.0",
-  "description": "屏幕观察 + 语音的学习辅助插件：按需看屏幕、自动记笔记、说话提问、朗读回答",
+  "version": "0.6.0",
+  "description": "DSH 学习辅助插件：持续观察屏幕并记笔记，支持摄像头取帧、本地语音转写与朗读",
   "type": "module",
   "license": "MIT",
   "repository": {

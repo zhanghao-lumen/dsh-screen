@@ -1,5 +1,5 @@
 #!/bin/bash
-# 构建原生依赖：whisper-server（本地转写）与 rec（录音器）。
+# 构建原生依赖：whisper-server（本地转写）、rec（录音器）、cam（摄像头取帧）。
 # 依赖：cmake、Xcode Command Line Tools（swiftc）。
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -28,6 +28,11 @@ cp "$VENDOR/whisper.cpp/build-static/bin/whisper-server" "$BIN/whisper-server"
 echo "== 编译录音器 =="
 swiftc -O -swift-version 5 "$HERE/rec.swift" -o "$BIN/rec" \
   -framework AVFoundation -framework CoreAudio
+
+echo "== 构建 cam（摄像头取帧）=="
+swiftc -O -swift-version 5 "$HERE/cam.swift" -o "$BIN/cam" \
+  -framework AVFoundation -framework CoreImage
+codesign --force --sign - "$BIN/cam" >/dev/null 2>&1 || true
 
 echo "== 准备模型 =="
 MODEL="$VENDOR/models/ggml-base.bin"
