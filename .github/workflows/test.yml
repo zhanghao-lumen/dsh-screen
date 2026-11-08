@@ -13,6 +13,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: 安装测试依赖（@deepseek-ai/dsh-llm，用来构造真实消息）
+        run: npm ci --no-audit --no-fund
       - name: 语法检查
         run: npm run check
       - name: 单元测试（用固定帧，CI 里没有屏幕和 TCC 权限）

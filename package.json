@@ -54,5 +54,8 @@
     "test": "node test/host.test.mjs && node test/client.test.mjs",
     "check": "node --check lib/index.js && node --check lib/client.js",
     "test:ci": "DSH_SCREEN_FAKE_CAPTURE=1 node test/host.test.mjs && node test/client.test.mjs"
+  },
+  "devDependencies": {
+    "@deepseek-ai/dsh-llm": "0.2.2-rc.1"
   }
 }
