@@ -19,6 +19,14 @@ const agent = {
   followup(msg) { this.sent = msg },
 }
 
+const other = {
+  id: 'session-2',
+  status: 'idle',
+  options: { provider: 'deepseek', model: 'deepseek-vision' },
+  followup(msg) { this.sent = msg },
+}
+let boundAlive = true
+
 const ctx = {
   effect(fn) { const d = fn(); if (typeof d === 'function') disposers.push(d); return d },
   // cordis: 服务就绪后才执行回调；桩里服务都在，直接同步执行
@@ -28,7 +36,11 @@ const ctx = {
     if (key === 'tools') return { register: (def) => { tools.set(def.name, def); return () => tools.delete(def.name) } }
     if (key === 'commands') return { register: (def) => { commands.set(def.name, def); return () => commands.delete(def.name) } }
     if (key === 'webServer') return { register: (r) => { route = r; return () => { route = null } } }
-    if (key === 'agents') return { get: (id) => (id === 'session-1' ? agent : undefined) }
+    if (key === 'agents')
+      return {
+        get: (id) => (id === 'session-1' && boundAlive ? agent : id === 'session-2' ? other : undefined),
+        list: () => (boundAlive ? [agent, other] : [other]),
+      }
     if (key === 'attachments') return { saveImages: async (list) => list.map((f, i) => ({ attachmentId: `att-${i}`, bytes: f.data.length })) }
     if (key === 'llm') return { resolveModelInfo: async () => ({ inputModalities: ['text', 'image'] }) }
     if (key === 'systemPrompt') return { section: (def) => { sections.push(def); return () => {} } }
@@ -168,6 +180,26 @@ console.log('[silence] 人声 RMS =', Math.round(await internals.wavRms('/tmp/t.
 runtime.voice.tts = false
 mod.speak('这一句不该被念出来')
 console.log('[tts] 关闭时不说话:', runtime.voice.speaking === undefined || runtime.voice.speaking === null)
+
+// 10. doctor：真抓一帧 + 检查模型 + 真发一帧
+const doc = await commands.get('study').handler({ agent, rawInput: ' doctor', attachments: [] })
+console.log('\n[study doctor]\n' + doc.text)
+if (!doc.text.includes('抓屏') || !doc.text.includes('支持图片输入')) throw new Error('study doctor 输出不完整')
+
+// 11. 会话隔离：绑定会话下线后必须跳过，绝不注入到别的会话
+runtime.enabled = true
+runtime.sessionId = 'session-1'
+boundAlive = false
+runtime.changeSeq += 1
+const iso = await internals.tick(ctx)
+console.log('\n[isolation]', JSON.stringify(iso), '| 别的会话收到消息:', Boolean(other.sent))
+if (iso.skipped !== 'bound-session-missing') throw new Error('绑定会话失效时应跳过')
+if (other.sent) throw new Error('会话隔离失败：注入到了别的会话')
+
+// 12. 任意会话的事件不再改写绑定
+sessionHandler({ id: 'session-2' }, { type: 'assistant/message', data: { stream: [] } })
+console.log('[isolation] onEvent 之后绑定仍是:', runtime.sessionId, '| lastActive:', runtime.lastActiveSession)
+if (runtime.sessionId !== 'session-1') throw new Error('onEvent 不应改写注入目标')
 
 server.close()
 process.exit(0)

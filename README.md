@@ -1,5 +1,7 @@
 # dsh-screen
 
+[![test](https://github.com/zhanghao-lumen/dsh-screen/actions/workflows/test.yml/badge.svg)](https://github.com/zhanghao-lumen/dsh-screen/actions/workflows/test.yml)
+
 > 给 [DeepSeek Harness](https://deepseek-harness.github.io/deepseek-harness/) 的学习辅助插件：**看得见你的屏幕，记得住刚才讲了什么，还能听懂你说话。**
 
 一个插件，换来输入框旁边的两个开关：**学习模式**和**语音**。
@@ -108,13 +110,38 @@ curl http://127.0.0.1:64991/dsh-screen-api/state
 /study off      关闭
 /study notes    看最近 10 分钟笔记
 /study status   看状态（默认）
+/study doctor   自检：抓一帧 + 检查模型能否看图 + 真发一帧让模型描述
 
 /voice on       开始录音（再说一次结束并发送）
 /voice off      取消本次录音
 /voice tts on   开启朗读
 /voice tts off  关闭朗读
 /voice status   语音状态
+/voice doctor   自检：录音器/模型/输入音量/设备 + 录 1 秒测电平与转写
 ```
+
+### 装完先跑一次自检
+
+两个 doctor 命令解决「装好了但不知道通不通」：
+
+```
+/study doctor
+```
+
+会依次报告：抓屏尺寸与体积、当前模型是否支持图片输入，然后把这一帧真的发给模型，让它用一句话描述看到了什么。
+
+- 说得出你屏幕上的窗口 → 抓屏与图片链路都通。
+- 只说「只看到壁纸」 → 系统给它开了屏幕录制权限，但内容区没抓到（或 TCC 没生效，重启应用再试）。
+
+```
+/voice doctor
+```
+
+会报告：录音器/转写引擎/模型是否就位、系统输入音量、默认输入设备，然后录 1 秒做电平测试；有声音就顺带转写一句给你看。
+
+### 多会话
+
+学习模式只绑定**开启时所在的那个会话**：切到别的对话再开一次会重新绑定并清空旧笔记。绑定会话被关掉后，自动观察会跳过（日志里是 `bound-session-missing`），**不会**把某个对话的屏幕塞进另一个对话。
 
 ### HTTP 接口
 
@@ -178,7 +205,7 @@ curl http://127.0.0.1:64991/dsh-screen-api/state
 - **模型看到的是离散帧，不是视频流。** 这里的「实时」= 30 秒一次的快照 + 变化驱动，不是逐帧直播。
 - **只在 macOS 上验证过。** 抓屏与录音都依赖 macOS 原生命令与框架。
 - **没有 TCC 授权时抓屏「成功但无用」**：返回的是壁纸，不是报错。
-- **语音端到端尚未在真实会话里验证**：本机测试时麦克风收到的音频近乎静音（系统输入音量偏低），转写链路本身已验证（0.07–0.7 秒/次）。
+- **语音端到端尚未在真实会话里验证**：本机测试时麦克风收到的音频近乎静音（系统输入音量 15/100），转写链路本身已验证（0.07–0.7 秒/次）。先跑 `/voice doctor` 能看到卡在哪一步。
 - **朗读只验证了开关逻辑**，真实回合里没有完整听过。
 - **自动注入只在 agent 空闲时投递**，模型正在回答时会跳过这一轮，不打断对话。
 
@@ -211,7 +238,9 @@ native/rec.swift   录音器（AVAudioEngine → 16kHz 单声道 WAV）
 native/build.sh    构建 whisper-server 与 rec
 native/bin/        预编译二进制（macOS arm64）
 cordis.patch.yml   插件在 cordis 树里的插入点
-test/              桩测试
+test/              桩测试（`test:ci` 用固定帧，CI 里不需要屏幕权限）
+test/fixtures/     CI 用的固定帧
+.github/           GitHub Actions：语法检查 + 单元测试
 dev/               直连源码调试用的 patch
 ```
 

@@ -1,0 +1,19 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: 语法检查
+        run: npm run check
+      - name: 单元测试（用固定帧，CI 里没有屏幕和 TCC 权限）
+        run: npm run test:ci
