@@ -1,9 +1,12 @@
 process.env.DSH_SCREEN_NO_SAMPLER = '1'
 process.env.DSH_SCREEN_FAKE_CAMERA = '1'
 import { createServer } from 'node:http'
-import { writeFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+
+// 测试自己用一个临时 home，不碰真实的 ~/.dsh
+process.env.DSH_HOME = mkdtempSync(join(tmpdir(), 'dsh-screen-test-'))
 
 const mod = await import(new URL('../lib/index.js', import.meta.url).href)
 const { apply, internals } = mod
@@ -267,6 +270,19 @@ console.log('[stats cmd]', statsCmd.text.split('\n')[0])
 if (!statsCmd.text.includes('今日')) throw new Error('/study stats 应输出今日用量')
 const stateWithStats = internals.currentState(ctx)
 if (!stateWithStats.stats || !stateWithStats.stats.tokens) throw new Error('/state 应带上今日用量')
+
+// 15. 笔记归档：落到 $DSH_HOME/screen-notes/YYYY-MM-DD.jsonl，能按天读回
+const archiveOne = internals.addNote('归档测试：讲了梯度下降的收敛条件')
+await new Promise((resolve) => setTimeout(resolve, 120))
+const noteFiles = readdirSync(join(process.env.DSH_HOME, 'screen-notes'))
+console.log('[archive] 文件:', noteFiles)
+if (!noteFiles.some((name) => /^\d{4}-\d{2}-\d{2}\.jsonl$/.test(name))) throw new Error('归档目录里应有当天 jsonl')
+const archiveRows = await internals.readNotesArchive(1)
+console.log('[archive] 读回', archiveRows.length, '条，最后一条:', archiveRows.at(-1)?.text)
+if (!archiveRows.some((row) => row.text.includes('梯度下降'))) throw new Error('归档读回应包含刚写的笔记')
+const notesCmd = await commands.get('study').handler({ agent, rawInput: ' notes --today', attachments: [] })
+console.log('[archive cmd]', notesCmd.text.split('\n')[0])
+if (!notesCmd.text.includes('归档笔记')) throw new Error('/study notes --today 应输出归档')
 
 server.close()
 process.exit(0)
